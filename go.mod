@@ -3,6 +3,7 @@ module github.com/wolfbolin/bolbox
 go 1.24.1
 
 require (
+	github.com/agiledragon/gomonkey/v2 v2.14.0
 	github.com/cockroachdb/errors v1.11.1
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
