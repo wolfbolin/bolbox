@@ -2,6 +2,7 @@ package cfg
 
 import (
 	"github.com/wolfbolin/bolbox/pkg/configs"
+	"github.com/wolfbolin/bolbox/pkg/log"
 )
 
 // Config 应用配置结构体
@@ -33,7 +34,7 @@ var cm *configs.Manager[Config]
 func init() {
 	// 使用默认配置初始化管理器
 	// 配置加载优先级：默认值 < 环境变量 < 命令行参数 < 动态映射（ParseMap）
-	cm = configs.NewManager[Config](&Config{
+	mgr, err := configs.NewManager[Config](&Config{
 		ServiceName: "my-service",
 		ServicePort: 8080,
 		Debug:       false,
@@ -43,6 +44,10 @@ func init() {
 		DBPort:      3306,
 		Version:     "1.0.0",
 	})
+	if err != nil {
+		log.Fatalf("Init config manager failed. %v", err)
+	}
+	cm = mgr
 
 	// 其他初始化方式示例：
 	// 1. 不使用默认值（所有字段使用零值）

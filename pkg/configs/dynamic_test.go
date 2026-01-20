@@ -6,69 +6,70 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestManager_ParseMap(t *testing.T) {
+func TestManager_parseMap(t *testing.T) {
 	// 创建测试配置管理器
-	manager := NewManager[testConf](&testConf{
-		EnableService: false,
-		ServiceName:   "default-service",
-		ServicePort:   8080,
-		ClusterNodes:  5,
-		RolloverFactor: 0.5,
+	manager, err := NewManager[flagTestConf](&flagTestConf{
+		BoolField:    false,
+		StringField:  "default-service",
+		IntField:     43,
+		Int64Field:   5,
+		Float64Field: 0.5,
 	})
+	assert.Nil(t, err)
 
 	// 测试用例1: 正常情况 - 更新所有字段
 	t.Run("UpdateAllFields", func(t *testing.T) {
 		manager.ParseMap(map[string]string{
-			"EnableService":  "true",
-			"ServiceName":    "test-service",
-			"ServicePort":    "9090",
-			"ClusterNodes":   "10",
-			"RolloverFactor": "0.75",
+			"BoolField":    "true",
+			"StringField":  "test-string",
+			"IntField":     "72",
+			"Int64Field":   "12345678910",
+			"Float64Field": "0.75",
 		})
 
 		config := manager.Vars()
-		assert.Equal(t, true, config.EnableService)
-		assert.Equal(t, "test-service", config.ServiceName)
-		assert.Equal(t, 9090, config.ServicePort)
-		assert.Equal(t, int64(10), config.ClusterNodes)
-		assert.Equal(t, 0.75, config.RolloverFactor)
+		assert.Equal(t, true, config.BoolField)
+		assert.Equal(t, "test-string", config.StringField)
+		assert.Equal(t, 72, config.IntField)
+		assert.Equal(t, int64(12345678910), config.Int64Field)
+		assert.Equal(t, 0.75, config.Float64Field)
 	})
 
 	// 测试用例2: nil map
 	t.Run("NilMapShouldNotChangeAnything", func(t *testing.T) {
 		// 先设置一些值
 		manager.ParseMap(map[string]string{
-			"ServiceName": "before-nil",
+			"StringField": "before-nil",
 		})
 		config1 := manager.Vars()
-		assert.Equal(t, "before-nil", config1.ServiceName)
+		assert.Equal(t, "before-nil", config1.StringField)
 
 		// 传入 nil map
 		manager.ParseMap(nil)
 
 		// 值应该保持不变
 		config2 := manager.Vars()
-		assert.Equal(t, "before-nil", config2.ServiceName)
+		assert.Equal(t, "before-nil", config2.StringField)
 	})
 
 	// 测试用例3: 部分字段更新
 	t.Run("UpdatePartialFields", func(t *testing.T) {
 		// 重置为初始值
 		manager.ParseMap(map[string]string{
-			"EnableService": "false",
-			"ServiceName":   "initial",
-			"ServicePort":   "8080",
+			"BoolField":   "false",
+			"StringField": "initial",
+			"IntField":    "8080",
 		})
 
 		// 只更新一个字段
 		manager.ParseMap(map[string]string{
-			"ServicePort": "3000",
+			"IntField": "3000",
 		})
 
 		config := manager.Vars()
-		assert.Equal(t, false, config.EnableService)
-		assert.Equal(t, "initial", config.ServiceName)
-		assert.Equal(t, 3000, config.ServicePort)
+		assert.Equal(t, false, config.BoolField)
+		assert.Equal(t, "initial", config.StringField)
+		assert.Equal(t, 3000, config.IntField)
 	})
 
 	// 测试用例4: 不存在的字段名（应该被忽略）
@@ -78,15 +79,15 @@ func TestManager_ParseMap(t *testing.T) {
 		// 尝试更新不存在的字段
 		manager.ParseMap(map[string]string{
 			"NonExistentField": "some-value",
-			"ServicePort":      "7777",
+			"IntField":         "7777",
 		})
 
 		config := manager.Vars()
-		// ServicePort 应该被更新
-		assert.Equal(t, 7777, config.ServicePort)
+		// IntField 应该被更新
+		assert.Equal(t, 7777, config.IntField)
 		// 其他字段应该保持不变
-		assert.Equal(t, originalConfig.EnableService, config.EnableService)
-		assert.Equal(t, originalConfig.ServiceName, config.ServiceName)
+		assert.Equal(t, originalConfig.BoolField, config.BoolField)
+		assert.Equal(t, originalConfig.StringField, config.StringField)
 	})
 
 	// 测试用例5: 无效的值（类型转换失败，应该被忽略）
@@ -95,17 +96,17 @@ func TestManager_ParseMap(t *testing.T) {
 
 		// 尝试设置无效的值
 		manager.ParseMap(map[string]string{
-			"ServicePort":   "not-a-number",
-			"EnableService": "not-a-bool",
-			"ServiceName":   "valid-string",
+			"IntField":    "not-a-number",
+			"BoolField":   "not-a-bool",
+			"StringField": "valid-string",
 		})
 
 		config := manager.Vars()
-		// ServiceName 应该被更新（字符串类型）
-		assert.Equal(t, "valid-string", config.ServiceName)
-		// ServicePort 和 EnableService 应该保持不变（转换失败）
-		assert.Equal(t, originalConfig.ServicePort, config.ServicePort)
-		assert.Equal(t, originalConfig.EnableService, config.EnableService)
+		// StringField 应该被更新（字符串类型）
+		assert.Equal(t, "valid-string", config.StringField)
+		// IntField 和 BoolField 应该保持不变（转换失败）
+		assert.Equal(t, originalConfig.IntField, config.IntField)
+		assert.Equal(t, originalConfig.BoolField, config.BoolField)
 	})
 
 	// 测试用例6: 空 map
