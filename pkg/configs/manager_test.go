@@ -24,6 +24,8 @@ type flagTestConf struct {
 	Float32Field float32 `flag:"float32-field" desc:"float32字段"`
 	Float64Field float64 `flag:"float64-field" desc:"float64字段"`
 
+	MapField map[string]string `flag:"map-field" env:"MAP_FIELD" desc:"map字段"`
+
 	// 没有 flag 标签的字段（不应该被解析）
 	NoFlagField string `desc:"没有flag标签的字段"`
 }

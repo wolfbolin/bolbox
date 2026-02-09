@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"encoding/json"
 	"reflect"
 	"strconv"
 	"sync"
@@ -25,6 +26,7 @@ func (m *Manager[T]) Conf(confKey string) (*Config, error) {
 
 // SetByValue 直接设置配置值
 func (c *Config) SetByValue(value any) error {
+	var convErr error
 	switch c.val.Kind() {
 	case reflect.String:
 		c.val.SetString(value.(string))
@@ -34,8 +36,13 @@ func (c *Config) SetByValue(value any) error {
 		c.val.SetInt(value.(int64))
 	case reflect.Float32, reflect.Float64:
 		c.val.SetFloat(value.(float64))
+	case reflect.Map:
+		convErr = json.Unmarshal([]byte(value.(string)), c.val.Addr().Interface())
 	default:
 		return errors.Wrapf(ConfValueSetError, "Not suppose set value for conf[%s](%s) ", c.key, c.val.Kind().String())
+	}
+	if convErr != nil {
+		return errors.Wrapf(ConfValueSetError, "Parse value to set conf[%s](%s) failed. %s", c.key, c.val.Kind().String(), convErr.Error())
 	}
 	c.notify(value)
 	return nil
@@ -65,6 +72,8 @@ func (c *Config) SetByString(value string) error {
 		if convErr == nil {
 			c.val.SetFloat(floatVal)
 		}
+	case reflect.Map:
+		convErr = json.Unmarshal([]byte(value), c.val.Addr().Interface())
 	default:
 		return errors.Wrapf(ConfValueSetError, "Not suppose set value for conf[%s](%s) ", c.key, c.val.Kind().String())
 	}

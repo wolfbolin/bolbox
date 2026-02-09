@@ -71,6 +71,11 @@ func parseFlag(flagSet *flag.FlagSet, fieldKey reflect.StructField, conf *Config
 		*changes = append(*changes, func() {
 			_ = conf.SetByValue(*valAddr)
 		})
+	case reflect.Map:
+		valAddr := flagSet.String(flagName, conf.val.String(), flagDesc)
+		*changes = append(*changes, func() {
+			_ = conf.SetByValue(*valAddr)
+		})
 	default:
 		return errors.Wrapf(ParseFlagsError, "Not suppose parse process flag[%s] for var[%s]", flagName, fieldKey.Name)
 	}

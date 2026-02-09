@@ -27,6 +27,8 @@ type Config struct {
 
 	// 仅使用默认值，不使用环境变量和命令行参数
 	Version string
+
+	AppSecrets map[string]string `flag:"app-secrets" env:"APP_SECRETS" desc:"应用密钥"`
 }
 
 var cm *configs.Manager[Config]
