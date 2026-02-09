@@ -115,7 +115,7 @@ func (m *Manager) Done(stop context.CancelFunc) <-chan struct{} {
 			log.Errorf("Unable to obtain module[%s] status.", mod.Name())
 			continue
 		}
-		if modStatus.Get() == RunningStatus {
+		if modStatus.Get() == StatusRunning {
 			log.Infof("Module[%s] is currently running. Notify it to gracefully exit", mod.Name())
 			stopCount += 1
 		} else {

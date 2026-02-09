@@ -6,10 +6,10 @@ import "sync"
 type Status string
 
 const (
-	// RunningStatus 模块正在运行
-	RunningStatus Status = "running"
-	// StoppedStatus 模块停止运行
-	StoppedStatus Status = "stopped"
+	// StatusRunning 模块正在运行
+	StatusRunning Status = "running"
+	// StatusStopped 模块停止运行
+	StatusStopped Status = "stopped"
 )
 
 // ModuleStatus 模块状态类
@@ -22,7 +22,7 @@ type ModuleStatus struct {
 // NewModuleStatus 新建一个 ModuleStatus 实例
 func NewModuleStatus() *ModuleStatus {
 	return &ModuleStatus{
-		status:   StoppedStatus,
+		status:   StatusStopped,
 		syncChan: make(chan Status),
 	}
 }
