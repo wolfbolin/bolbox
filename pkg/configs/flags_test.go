@@ -273,3 +273,241 @@ func TestManager_parseFlags(t *testing.T) {
 		})
 	}
 }
+
+func TestFilterKnownArgs(t *testing.T) {
+	// 构造一个注册了 known-flag 和 bool-flag 的 flagSet
+	newFlagSet := func() *flag.FlagSet {
+		fs := flag.NewFlagSet("test", flag.ContinueOnError)
+		fs.String("known-flag", "", "")
+		fs.Bool("bool-flag", false, "")
+		return fs
+	}
+
+	tests := []struct {
+		name     string
+		args     []string
+		expected []string
+	}{
+		{
+			name:     "全部是已知flag",
+			args:     []string{"--known-flag", "value", "--bool-flag"},
+			expected: []string{"--known-flag", "value", "--bool-flag"},
+		},
+		{
+			name:     "全部是未知flag，应全部过滤",
+			args:     []string{"--unknown-flag", "value", "--another-unknown"},
+			expected: []string{},
+		},
+		{
+			name:     "已知与未知混合，保留已知",
+			args:     []string{"--unknown-flag", "value", "--known-flag", "hello"},
+			expected: []string{"--known-flag", "hello"},
+		},
+		{
+			name:     "使用等号形式的已知flag",
+			args:     []string{"--known-flag=hello"},
+			expected: []string{"--known-flag=hello"},
+		},
+		{
+			name:     "使用等号形式的未知flag，应过滤",
+			args:     []string{"--unknown-flag=world"},
+			expected: []string{},
+		},
+		{
+			name:     "单横线前缀的已知flag",
+			args:     []string{"-known-flag", "value"},
+			expected: []string{"-known-flag", "value"},
+		},
+		{
+			name:     "单横线前缀的未知flag，应过滤",
+			args:     []string{"-unknown", "value"},
+			expected: []string{},
+		},
+		{
+			name:     "未知flag后跟另一个flag（非位置参数），只过滤未知flag本身",
+			args:     []string{"--unknown-flag", "--known-flag", "hello"},
+			expected: []string{"--known-flag", "hello"},
+		},
+		{
+			name:     "位置参数（非flag）直接保留",
+			args:     []string{"positional", "--known-flag", "value"},
+			expected: []string{"positional", "--known-flag", "value"},
+		},
+		{
+			name:     "空参数列表",
+			args:     []string{},
+			expected: []string{},
+		},
+		{
+			name:     "已知bool flag无值形式",
+			args:     []string{"--bool-flag"},
+			expected: []string{"--bool-flag"},
+		},
+		{
+			name:     "未知bool flag无值，紧跟已知flag，不误吞已知flag的value",
+			args:     []string{"--unknown-bool", "--known-flag", "myval"},
+			expected: []string{"--known-flag", "myval"},
+		},
+		{
+			name:     "未知flag夹在两个已知flag之间",
+			args:     []string{"--known-flag", "v1", "--unknown", "x", "--bool-flag"},
+			expected: []string{"--known-flag", "v1", "--bool-flag"},
+		},
+		{
+			name:     "未知flag后跟负数值，应将负数值一并跳过",
+			args:     []string{"--unknown", "-42", "--known-flag", "kept"},
+			expected: []string{"--known-flag", "kept"},
+		},
+		{
+			name:     "已知flag的value为负数，负数不被looksLikeFlag识别为flag，完整保留",
+			args:     []string{"--known-flag", "-42"},
+			expected: []string{"--known-flag", "-42"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := newFlagSet()
+			got := filterKnownArgs(fs, tt.args)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestParseFlags_WithUnknownFlags(t *testing.T) {
+	// 验证 parseFlags 在遇到未知 flag 时不会报错
+	mockEnv := func(key string) string { return "" }
+	_ = mockEnv
+
+	tests := []struct {
+		name           string
+		args           []string
+		defaultConfig  flagTestConf
+		expectedConfig flagTestConf
+	}{
+		{
+			name: "夹杂未知flag，已知flag仍正常解析",
+			args: []string{
+				"program",
+				"--unknown-flag", "ignored",
+				"--string-field", "parsed",
+				"--another-unknown=also-ignored",
+			},
+			defaultConfig:  flagTestConf{StringField: "default"},
+			expectedConfig: flagTestConf{StringField: "parsed"},
+		},
+		{
+			name: "全部为未知flag，保持默认值",
+			args: []string{
+				"program",
+				"--foo", "bar",
+				"--baz=qux",
+			},
+			defaultConfig:  flagTestConf{StringField: "default", IntField: 99},
+			expectedConfig: flagTestConf{StringField: "default", IntField: 99},
+		},
+		{
+			name: "未知flag在已知flag之前",
+			args: []string{
+				"program",
+				"--unknown", "value",
+				"--int-field", "42",
+			},
+			defaultConfig:  flagTestConf{IntField: 0},
+			expectedConfig: flagTestConf{IntField: 42},
+		},
+		{
+			name: "未知flag在已知flag之后",
+			args: []string{
+				"program",
+				"--string-field", "hello",
+				"--unknown", "world",
+			},
+			defaultConfig:  flagTestConf{StringField: "default"},
+			expectedConfig: flagTestConf{StringField: "hello"},
+		},
+		{
+			name: "等号形式未知flag不影响已知flag解析",
+			args: []string{
+				"program",
+				"--unknown=ignored",
+				"--bool-field",
+			},
+			defaultConfig:  flagTestConf{BoolField: false},
+			expectedConfig: flagTestConf{BoolField: true},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Args = tt.args
+			manager, err := NewManager[flagTestConf](&tt.defaultConfig)
+			assert.Nil(t, err, "parseFlags should not error on unknown flags")
+
+			config := manager.Vars()
+			assert.Equal(t, tt.expectedConfig.StringField, config.StringField, "StringField mismatch")
+			assert.Equal(t, tt.expectedConfig.BoolField, config.BoolField, "BoolField mismatch")
+			assert.Equal(t, tt.expectedConfig.IntField, config.IntField, "IntField mismatch")
+		})
+	}
+}
+
+func TestParseFlagName(t *testing.T) {
+	tests := []struct {
+		arg              string
+		expectedName     string
+		expectedHasValue bool
+	}{
+		// 双横线形式
+		{"--foo", "foo", false},
+		{"--foo=bar", "foo", true},
+		{"--foo=", "foo", true},
+		// 单横线形式
+		{"-foo", "foo", false},
+		{"-foo=bar", "foo", true},
+		// 非 flag（位置参数）
+		{"foo", "", false},
+		{"", "", false},
+		// 仅横线
+		{"-", "", false}, // "-" 去掉前缀后为空串，视为非 flag
+		// 等号出现在 value 里时只取第一个等号前的内容
+		{"--key=val=extra", "key", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.arg, func(t *testing.T) {
+			name, hasValue := parseFlagName(tt.arg)
+			assert.Equal(t, tt.expectedName, name, "name mismatch for arg %q", tt.arg)
+			assert.Equal(t, tt.expectedHasValue, hasValue, "hasValue mismatch for arg %q", tt.arg)
+		})
+	}
+}
+
+func TestLooksLikeFlag(t *testing.T) {
+	tests := []struct {
+		arg      string
+		expected bool
+	}{
+		// 明确是 flag
+		{"--foo", true},
+		{"-foo", true},
+		{"-f", true},
+		// 负数，不应被视为 flag
+		{"-1", false},
+		{"-42", false},
+		{"-0", false},
+		// 边界：空串或单横线
+		{"", false},
+		{"-", false},
+		// 无横线前缀
+		{"foo", false},
+		{"123", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.arg, func(t *testing.T) {
+			got := looksLikeFlag(tt.arg)
+			assert.Equal(t, tt.expected, got, "looksLikeFlag(%q)", tt.arg)
+		})
+	}
+}

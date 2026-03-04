@@ -51,6 +51,21 @@ func TestNewManager(t *testing.T) {
 	assert.NotNil(t, manager, manager.userConf, manager.valueMap, manager.confElem)
 }
 
+func TestManagerWithUnknownFlag(t *testing.T) {
+	originalArgs := os.Args
+	os.Args = append(os.Args, "-bool-field", "false")
+	os.Args = append(os.Args, "-unknown-field", "true")
+	defer func() {
+		os.Args = originalArgs
+	}()
+	confTable := flagTestConf{
+		BoolField: true,
+	}
+	manager, err := NewManager[flagTestConf](&confTable)
+	assert.Nil(t, err)
+	assert.NotNil(t, manager, manager.userConf, manager.valueMap, manager.confElem)
+}
+
 func TestManager_Vars(t *testing.T) {
 	manager, err := NewManager[flagTestConf](nil)
 	assert.Nil(t, err)

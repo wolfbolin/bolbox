@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/wolfbolin/bolbox/pkg/errors"
 )
@@ -28,7 +29,10 @@ func (m *Manager[T]) parseFlags() error {
 	flagSet.Usage = func() {}
 	flagSet.SetOutput(io.Discard)
 
-	err := flagSet.Parse(os.Args[1:])
+	args := os.Args[1:]
+	filteredArgs := filterKnownArgs(flagSet, args)
+
+	err := flagSet.Parse(filteredArgs)
 	if err != nil {
 		return errors.Wrapf(ParseFlagsError, "Parse with flag set failed. %s", err.Error())
 	}
@@ -90,4 +94,60 @@ func checkAndShowHelp(flagSet *flag.FlagSet) {
 			os.Exit(0)
 		}
 	}
+}
+
+// filterKnownArgs 过滤掉 flagSet 中未注册的命令行参数，避免出现 "flag provided but not defined" 错误
+func filterKnownArgs(flagSet *flag.FlagSet, args []string) []string {
+	known := make(map[string]bool)
+	flagSet.VisitAll(func(f *flag.Flag) {
+		known[f.Name] = true
+	})
+
+	result := make([]string, 0, len(args))
+	for i := 0; i < len(args); i++ {
+		name, hasValue := parseFlagName(args[i])
+		if name == "" {
+			// 非 flag 形式（位置参数），直接保留
+			result = append(result, args[i])
+			continue
+		}
+		if !known[name] {
+			// 未知 flag：若是 --flag value 形式，额外跳过紧随的 value
+			if !hasValue && i+1 < len(args) && !looksLikeFlag(args[i+1]) {
+				i++
+			}
+			continue
+		}
+		result = append(result, args[i])
+		// 已知 flag 的 --flag value 形式：把紧随的 value 一并保留
+		if !hasValue && i+1 < len(args) && !looksLikeFlag(args[i+1]) {
+			i++
+			result = append(result, args[i])
+		}
+	}
+	return result
+}
+
+// parseFlagName 从单个参数中解析出 flag 名。
+// 返回 (flagName, hasValue)：hasValue 表示值已内联（--flag=value 形式）。
+// 若参数不是 flag（不以 '-' 开头），返回 ("", false)。
+func parseFlagName(arg string) (name string, hasValue bool) {
+	if len(arg) == 0 || arg[0] != '-' {
+		return "", false
+	}
+	// 去掉 - 或 --
+	name = strings.TrimPrefix(strings.TrimPrefix(arg, "--"), "-")
+	// 处理 --flag=value 形式
+	if before, _, found := strings.Cut(name, "="); found {
+		return before, true
+	}
+	return name, false
+}
+
+// looksLikeFlag 判断一个参数是否是 flag（以 '-' 后跟字母开头，排除纯负数如 -123）
+func looksLikeFlag(arg string) bool {
+	if len(arg) < 2 || arg[0] != '-' {
+		return false
+	}
+	return arg[1] < '0' || arg[1] > '9'
 }
