@@ -50,13 +50,13 @@ func (h *HttpRspWarp) Text(format string, a ...any) *HttpRspWarp {
 func (h *HttpRspWarp) BadRequest(e error) *HttpRspWarp {
 	log.Warnf("BadRequest: %+v", e)
 	h.Code(http.StatusBadRequest)
-	h.Text("%s", e.Error())
+	h.Text("%s\n", e.Error())
 	return h
 }
 
 func (h *HttpRspWarp) ServerError(e error) *HttpRspWarp {
 	log.Errorf("InternalServerError: %+v", e)
 	h.Code(http.StatusInternalServerError)
-	h.Text("%s", e.Error())
+	h.Text("%s\n", e.Error())
 	return h
 }
