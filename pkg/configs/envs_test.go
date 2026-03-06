@@ -23,7 +23,7 @@ func TestManager_parseEnvs(t *testing.T) {
 	})
 	defer mock.Reset()
 
-	manager, err := NewManager[flagTestConf](nil)
+	manager, err := NewManager[flagTestConf](nil).Parse()
 	assert.Nil(t, err)
 	config := manager.Vars()
 	assert.Equal(t, config.StringField, "true")

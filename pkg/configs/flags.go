@@ -1,12 +1,11 @@
 package configs
 
 import (
-	"flag"
 	"fmt"
-	"io"
 	"os"
 	"reflect"
 
+	flag "github.com/spf13/pflag"
 	"github.com/wolfbolin/bolbox/pkg/errors"
 )
 
@@ -14,6 +13,8 @@ import (
 func (m *Manager[T]) parseFlags() error {
 	t := m.confElem.Type()
 	flagSet := flag.NewFlagSet("", flag.ContinueOnError)
+	flagSet.ParseErrorsAllowlist.UnknownFlags = true
+
 	changes := make([]func(), 0)
 	for i := 0; i < t.NumField(); i++ {
 		fieldKey := t.Field(i)
@@ -24,13 +25,16 @@ func (m *Manager[T]) parseFlags() error {
 		}
 	}
 
-	checkAndShowHelp(flagSet)
-	flagSet.Usage = func() {}
-	flagSet.SetOutput(io.Discard)
-
+	//flagSet.SetOutput(io.Discard)
 	err := flagSet.Parse(os.Args[1:])
+	if errors.Is(err, flag.ErrHelp) {
+		if m.Options.ExitOnHelp {
+			os.Exit(0)
+		}
+		return errors.Join(ErrPrintUsage, err)
+	}
 	if err != nil {
-		return errors.Wrapf(ParseFlagsError, "Parse with flag set failed. %s", err.Error())
+		return errors.Wrapf(ErrParseFlags, "Parse with flag set failed. %s", err.Error())
 	}
 	for _, change := range changes {
 		change()
@@ -77,17 +81,7 @@ func parseFlag(flagSet *flag.FlagSet, fieldKey reflect.StructField, conf *Config
 			_ = conf.SetByValue(*valAddr)
 		})
 	default:
-		return errors.Wrapf(ParseFlagsError, "Not suppose parse process flag[%s] for var[%s]", flagName, fieldKey.Name)
+		return errors.Wrapf(ErrParseFlags, "Not suppose parse process flag[%s] for var[%s]", flagName, fieldKey.Name)
 	}
 	return nil
-}
-
-// checkAndShowHelp 检查并显示帮助信息
-func checkAndShowHelp(flagSet *flag.FlagSet) {
-	for _, arg := range os.Args[1:] {
-		if arg == "--help" || arg == "-h" {
-			flagSet.Usage()
-			os.Exit(0)
-		}
-	}
 }

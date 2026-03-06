@@ -14,7 +14,7 @@ func TestManager_parseMap(t *testing.T) {
 		IntField:     43,
 		Int64Field:   5,
 		Float64Field: 0.5,
-	})
+	}).Parse()
 	assert.Nil(t, err)
 
 	// 测试用例1: 正常情况 - 更新所有字段

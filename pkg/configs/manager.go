@@ -12,20 +12,24 @@ type Manager[T any] struct {
 	valueMap map[string]*Config
 	confElem reflect.Value
 	confLock sync.RWMutex
+
+	Options *Options
 }
 
 // NewManager 创建配置管理器，自动解析环境变量和命令行参数
-func NewManager[T any](def *T) (*Manager[T], error) {
+func NewManager[T any](def *T) *Manager[T] {
 	var userConfig *T
 	if def != nil {
 		userConfig = def
 	} else {
 		userConfig = new(T)
 	}
+
 	mgr := &Manager[T]{
 		userConf: userConfig,
 		valueMap: make(map[string]*Config),
 		confElem: reflect.ValueOf(userConfig).Elem(),
+		Options:  DefaultOptions(),
 	}
 
 	// 建立反射对象索引
@@ -39,15 +43,26 @@ func NewManager[T any](def *T) (*Manager[T], error) {
 		}
 	}
 
-	err := mgr.parseEnvs()
-	if err != nil {
-		return nil, err
+	return mgr
+}
+
+func (m *Manager[T]) Parse() (*Manager[T], error) {
+	// 按照解析顺序解析配置
+	for _, flow := range m.Options.ParseFlows {
+		switch flow {
+		case FlowEnv:
+			err := m.parseEnvs()
+			if err != nil {
+				return m, err
+			}
+		case FlowFlag:
+			err := m.parseFlags()
+			if err != nil {
+				return m, err
+			}
+		}
 	}
-	err = mgr.parseFlags()
-	if err != nil {
-		return nil, err
-	}
-	return mgr, nil
+	return m, nil
 }
 
 // Vars 返回配置的只读副本

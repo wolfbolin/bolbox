@@ -13,16 +13,16 @@ func TestManager_Conf(t *testing.T) {
 	confTable := flagTestConf{
 		IntField: 1,
 	}
-	manager, err := NewManager[flagTestConf](&confTable)
+	manager, err := NewManager[flagTestConf](&confTable).Parse()
 	assert.Nil(t, err)
 
 	_, err = manager.Conf("NotExistKey")
-	assert.True(t, errors.Is(err, ConfNotExistError))
+	assert.True(t, errors.Is(err, ErrConfNotExist))
 
 	conf, err := manager.Conf("IntField")
 	assert.Nil(t, err)
 	err = conf.SetByString("null")
-	assert.True(t, errors.Is(err, ConfValueSetError))
+	assert.True(t, errors.Is(err, ErrConfValueSet))
 	err = conf.SetByString("2")
 	assert.Nil(t, err)
 	assert.Equal(t, 2, manager.Vars().IntField)
@@ -34,7 +34,7 @@ func TestConfig_OnChange(t *testing.T) {
 		confTable := flagTestConf{
 			StringField: "initial",
 		}
-		manager, err := NewManager[flagTestConf](&confTable)
+		manager, err := NewManager[flagTestConf](&confTable).Parse()
 		assert.Nil(t, err)
 
 		conf, err := manager.Conf("StringField")
@@ -64,7 +64,7 @@ func TestConfig_OnChange(t *testing.T) {
 		confTable := flagTestConf{
 			IntField: 10,
 		}
-		manager, err := NewManager[flagTestConf](&confTable)
+		manager, err := NewManager[flagTestConf](&confTable).Parse()
 		assert.Nil(t, err)
 
 		conf, err := manager.Conf("IntField")
@@ -117,7 +117,7 @@ func TestConfig_OnChange(t *testing.T) {
 		confTable := flagTestConf{
 			BoolField: false,
 		}
-		manager, err := NewManager[flagTestConf](&confTable)
+		manager, err := NewManager[flagTestConf](&confTable).Parse()
 		assert.Nil(t, err)
 
 		conf, err := manager.Conf("BoolField")
@@ -158,7 +158,7 @@ func TestConfig_OnChange(t *testing.T) {
 		confTable := flagTestConf{
 			Float64Field: 1.0,
 		}
-		manager, err := NewManager[flagTestConf](&confTable)
+		manager, err := NewManager[flagTestConf](&confTable).Parse()
 		assert.Nil(t, err)
 
 		conf, err := manager.Conf("Float64Field")
@@ -202,7 +202,7 @@ func TestConfig_OnChange(t *testing.T) {
 		confTable := flagTestConf{
 			Int32Field: 100,
 		}
-		manager, err := NewManager[flagTestConf](&confTable)
+		manager, err := NewManager[flagTestConf](&confTable).Parse()
 		assert.Nil(t, err)
 
 		conf, err := manager.Conf("Int32Field")

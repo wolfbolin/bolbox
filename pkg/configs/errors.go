@@ -3,7 +3,8 @@ package configs
 import "github.com/wolfbolin/bolbox/pkg/errors"
 
 var (
-	ConfNotExistError = errors.New("Config key is not exist.")
-	ConfValueSetError = errors.New("Config value can not be set.")
-	ParseFlagsError   = errors.New("Parse command flags error.")
+	ErrConfNotExist = errors.New("Config key is not exist.")
+	ErrConfValueSet = errors.New("Config value can not be set.")
+	ErrParseFlags   = errors.New("Parse command flags error.")
+	ErrPrintUsage   = errors.New("User request to print usage.")
 )

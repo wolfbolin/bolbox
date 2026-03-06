@@ -21,7 +21,7 @@ func (m *Manager[T]) Conf(confKey string) (*Config, error) {
 	if value, exist := m.valueMap[confKey]; exist {
 		return value, nil
 	}
-	return nil, errors.Wrapf(ConfNotExistError, "Conf key[%s] is not exist", confKey)
+	return nil, errors.Wrapf(ErrConfNotExist, "Conf key[%s] is not exist", confKey)
 }
 
 // SetByValue 直接设置配置值
@@ -39,10 +39,10 @@ func (c *Config) SetByValue(value any) error {
 	case reflect.Map:
 		convErr = json.Unmarshal([]byte(value.(string)), c.val.Addr().Interface())
 	default:
-		return errors.Wrapf(ConfValueSetError, "Not suppose set value for conf[%s](%s) ", c.key, c.val.Kind().String())
+		return errors.Wrapf(ErrConfValueSet, "Not suppose set value for conf[%s](%s) ", c.key, c.val.Kind().String())
 	}
 	if convErr != nil {
-		return errors.Wrapf(ConfValueSetError, "Parse value to set conf[%s](%s) failed. %s", c.key, c.val.Kind().String(), convErr.Error())
+		return errors.Wrapf(ErrConfValueSet, "Parse value to set conf[%s](%s) failed. %s", c.key, c.val.Kind().String(), convErr.Error())
 	}
 	c.notify(value)
 	return nil
@@ -75,10 +75,10 @@ func (c *Config) SetByString(value string) error {
 	case reflect.Map:
 		convErr = json.Unmarshal([]byte(value), c.val.Addr().Interface())
 	default:
-		return errors.Wrapf(ConfValueSetError, "Not suppose set value for conf[%s](%s) ", c.key, c.val.Kind().String())
+		return errors.Wrapf(ErrConfValueSet, "Not suppose set value for conf[%s](%s) ", c.key, c.val.Kind().String())
 	}
 	if convErr != nil {
-		return errors.Wrapf(ConfValueSetError, "Parse value to set conf[%s](%s) failed. %s", c.key, c.val.Kind().String(), convErr.Error())
+		return errors.Wrapf(ErrConfValueSet, "Parse value to set conf[%s](%s) failed. %s", c.key, c.val.Kind().String(), convErr.Error())
 	}
 	c.notify(c.val.Interface())
 	return nil

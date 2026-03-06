@@ -1,7 +1,6 @@
 package configs
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,29 +29,19 @@ type flagTestConf struct {
 	NoFlagField string `desc:"没有flag标签的字段"`
 }
 
-func TestMain(m *testing.M) {
-	originalArgs := os.Args
-	os.Args = []string{""}
-	defer func() {
-		os.Args = originalArgs
-	}()
-	code := m.Run()
-	os.Exit(code)
-}
-
 func TestNewManager(t *testing.T) {
-	manager, err := NewManager[flagTestConf](nil)
+	manager, err := NewManager[flagTestConf](nil).Parse()
 	assert.Nil(t, err)
 	assert.NotNil(t, manager, manager.userConf, manager.valueMap, manager.confElem)
 
 	confTable := flagTestConf{}
-	manager, err = NewManager[flagTestConf](&confTable)
+	manager, err = NewManager[flagTestConf](&confTable).Parse()
 	assert.Nil(t, err)
 	assert.NotNil(t, manager, manager.userConf, manager.valueMap, manager.confElem)
 }
 
 func TestManager_Vars(t *testing.T) {
-	manager, err := NewManager[flagTestConf](nil)
+	manager, err := NewManager[flagTestConf](nil).Parse()
 	assert.Nil(t, err)
 	assert.NotNil(t, manager, manager.userConf, manager.valueMap, manager.confElem)
 
@@ -61,7 +50,7 @@ func TestManager_Vars(t *testing.T) {
 }
 
 func TestManager_Raws(t *testing.T) {
-	manager, err := NewManager[flagTestConf](nil)
+	manager, err := NewManager[flagTestConf](nil).Parse()
 	assert.Nil(t, err)
 	assert.NotNil(t, manager, manager.userConf, manager.valueMap, manager.confElem)
 
