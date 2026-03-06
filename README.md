@@ -48,22 +48,25 @@ go get github.com/wolfbolin/bolbox
 
 ### 配置管理
 
+#### 基本用法
+
 ```go
 import (
+    "fmt"
     "github.com/wolfbolin/bolbox/pkg/configs"
 )
 
 // 定义配置结构体
 type AppConfig struct {
-    ServerPort int    `env:"SERVER_PORT" flag:"server-port"`
-    Debug      bool   `env:"DEBUG" flag:"debug"`
-    DatabaseURL string `env:"DATABASE_URL" flag:"database-url"`
+    ServerPort int    `env:"SERVER_PORT" flag:"server-port" desc:"服务器端口"`
+    Debug      bool   `env:"DEBUG" flag:"debug" desc:"调试模式"`
+    DatabaseURL string `env:"DATABASE_URL" flag:"database-url" desc:"数据库连接URL"`
 }
 
 // 创建配置管理器
 conf, err := configs.NewManager(&AppConfig{
     ServerPort: 8080, // 默认值
-})
+}).Parse()
 if err != nil {
     // 处理错误
 }
@@ -71,15 +74,77 @@ if err != nil {
 // 获取配置值
 config := conf.Vars()
 fmt.Println("Server port:", config.ServerPort)
+fmt.Println("Debug mode:", config.Debug)
+fmt.Println("Database URL:", config.DatabaseURL)
+```
 
+#### 自定义配置选项
+
+```go
+// 自定义配置选项
+// Options 结构体包含以下字段：
+// - ExitOnHelp: 当用户请求帮助时是否退出程序，默认值为 true
+// - ParseFlows: 配置解析的顺序，默认顺序是 [FlowEnv, FlowFlag]
+
+// 创建配置管理器时指定自定义选项
+conf := configs.NewManager(&AppConfig{
+    ServerPort: 8080,
+})
+
+// 当用户请求帮助时不退出程序
+conf.Options.ExitOnHelp = false
+
+// 自定义配置解析顺序
+// 默认顺序是 [FlowEnv, FlowFlag]，即先解析环境变量，再解析命令行参数
+// 可以通过修改 ParseFlows 来改变解析顺序
+conf.Options.ParseFlows = []configs.Flow{configs.FlowFlag, configs.FlowEnv}
+
+// 解析配置
+_, err := conf.Parse()
+```
+
+#### 配置变更回调
+
+```go
 // 监听配置变更
 serverPortConf, err := conf.Conf("ServerPort")
 if err != nil {
     // 处理错误
 }
+
+// 添加变更回调
 serverPortConf.OnChange(func(val any) {
     fmt.Println("Server port changed:", val)
 })
+
+// 动态更新配置值
+serverPortConf.SetByValue(9090)
+```
+
+#### 动态更新配置
+
+```go
+// 通过 Conf 方法获取配置项
+serverPortConf, err := conf.Conf("ServerPort")
+if err != nil {
+    // 处理错误
+}
+
+// 通过 SetByValue 方法设置值
+err = serverPortConf.SetByValue(9090)
+if err != nil {
+    // 处理错误
+}
+
+// 通过 SetByString 方法设置值
+err = serverPortConf.SetByString("9090")
+if err != nil {
+    // 处理错误
+}
+
+// 获取更新后的配置
+config := conf.Vars()
+fmt.Println("Updated server port:", config.ServerPort)
 ```
 
 ### 日志管理
@@ -198,6 +263,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 - [github.com/agiledragon/gomonkey/v2 v2.14.0](https://github.com/agiledragon/gomonkey) - 用于测试
 - [github.com/cockroachdb/errors v1.11.1](https://github.com/cockroachdb/errors) - 错误处理
+- [github.com/spf13/pflag v1.0.10](https://github.com/spf13/pflag) - 命令行参数解析
 - [github.com/stretchr/testify v1.9.0](https://github.com/stretchr/testify) - 测试断言
 - [go.uber.org/zap v1.27.0](https://github.com/uber-go/zap) - 日志库
 - [gopkg.in/natefinch/lumberjack.v2 v2.2.1](https://github.com/natefinch/lumberjack) - 日志轮转
